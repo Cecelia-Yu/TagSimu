@@ -15,24 +15,22 @@ from ansys.aedt.core import Desktop, Hfss
 # ======= 必改：工程路径 & 设计名 =======
 AEDT_VERSION = "2023.1"  # 你是 2023R1
 PROJECT_FILE = r"D:\Ansoft\HawkeyeHardwareDesign.aedt"  # 你的 .aedt 文件全路径
-#DESIGN_NAME  = "ReflectTagDesign"                      # 这里可以指定design_name，但是我看不懂
-
 NON_GRAPHICAL = False   # True=后台；False=带 GUI（新手建议 False，便于对照）
 CLOSE_ON_EXIT = False
 
 # 启动 AEDT 并载入工程
 
 desk = Desktop(version=AEDT_VERSION, non_graphical=NON_GRAPHICAL)
-# 方式一：通过 Desktop.load_project 载入
-# app = desk.load_project(PROJECT_FILE, design_name=DESIGN_NAME)  # 指定design_name的时候，使用这条可以返回 HFSS 应用对象
-app = desk.load_project(PROJECT_FILE) #不指定design_name, 让它选active design
-#print("Active Design Name:", app.design_name)
-
-# 方式二（等效）：app = Hfss(projectname=PROJECT_FILE, design=DESIGN_NAME, version=AEDT_VERSION, non_graphical=NON_GRAPHICAL)
+app = desk.load_project(PROJECT_FILE)
 
 print("\n=== 项目信息 ===")
 print("Project:", PROJECT_FILE)
 print("Design :", app.design_name)
+print("Solution type:", app.solution_type)
+print("Existing setups:", app.existing_analysis_setups)
+# 边界/激励列表（如果真是空，基本确定未设置）
+for b in app.boundaries:
+    print(b.type, b.name)
 
 # ---------- 1) 分析 Setup & Sweep ----------
 print("\n=== 分析 Setups ===")
@@ -99,6 +97,6 @@ except Exception as e:
 
 print("\n✅ 信息汇总完毕。如果你想把信息写入txt/CSV，也可以把上面的 print 改成文件写入。")
 
-# 结束（可选）
+# 结束
 if CLOSE_ON_EXIT:
     desk.release_desktop()

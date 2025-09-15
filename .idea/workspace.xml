@@ -4,12 +4,8 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="4ef93ff9-73a7-42fc-8765-2906c8527308" name="更改" comment="initialize the project">
-      <changelist_data name="Cecelia-Yu" email="" automatic="false" />
-      <change afterPath="$PROJECT_DIR$/hke_read.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/readme.md" afterDir="false" />
+    <list default="true" id="4ef93ff9-73a7-42fc-8765-2906c8527308" name="更改" comment="successfully lauch the HFSS and print project info">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/hke_simu.py" beforeDir="false" afterPath="$PROJECT_DIR$/hke_simu.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -36,11 +32,13 @@
     {
       "state": "OPEN",
       "author": "Cecelia-Yu"
+    },
+    {
+      "state": "OPEN"
     }
   ],
   "lastFilter": {
-    "state": "OPEN",
-    "author": "Cecelia-Yu"
+    "state": "OPEN"
   }
 }]]></component>
   <component name="GithubPullRequestsUISettings">{
@@ -84,10 +82,31 @@
       <option name="presentableId" value="Default" />
       <updated>1757904807734</updated>
     </task>
+    <task id="LOCAL-00001" summary="successfully lauch the HFSS and print project info">
+      <option name="closed" value="true" />
+      <created>1757942934139</created>
+      <option name="number" value="00001" />
+      <option name="presentableId" value="LOCAL-00001" />
+      <option name="project" value="LOCAL" />
+      <updated>1757942934139</updated>
+    </task>
+    <option name="localTasksCounter" value="2" />
     <servers />
+  </component>
+  <component name="Vcs.Log.Tabs.Properties">
+    <option name="TAB_STATES">
+      <map>
+        <entry key="MAIN">
+          <value>
+            <State />
+          </value>
+        </entry>
+      </map>
+    </option>
   </component>
   <component name="VcsManagerConfiguration">
     <MESSAGE value="initialize the project" />
-    <option name="LAST_COMMIT_MESSAGE" value="initialize the project" />
+    <MESSAGE value="successfully lauch the HFSS and print project info" />
+    <option name="LAST_COMMIT_MESSAGE" value="successfully lauch the HFSS and print project info" />
   </component>
 </project>
