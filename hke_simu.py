@@ -1,77 +1,124 @@
 # -*- coding: utf-8 -*-
-# 目标：在已有几何上进行“平面波入射 → 反射/散射评估”
-# 关键修正点：
-#  - plane_wave 用 propagation_vector，而不是 theta/phi 命名参数
-#  - 无端口问题用 Discrete（或 Fast）扫频，并开启 save_fields/save_rad_fields
-#  - Region 已存在则不再新建空气域
 
+import os
 from ansys.aedt.core import Desktop
+from ansys.aedt.core.visualization.plot.pdf import AnsysReport
 
+# --- 项目和设计设置 ---
 AEDT_VERSION = "2023.1"
 PROJECT_FILE = r"D:\Ansoft\HawkeyeHardwareDesign.aedt"
-DESIGN_NAME  = "24GHzPlanarVAABackscatter"
+DESIGN_NAME = "24GHzPlanarVAABackscatter"
+IMAGE_DIR = r"D:\Ansoft\HawkeyeHardwareDesign\Images" # 建议将图片保存在单独的目录
+REPORTS_DIR = r"D:\Ansoft\Reports"
 
-F0, FMIN, FMAX, NPTS = "24GHz", "22GHz", "26GHz", 201
+# --- 创建输出目录 (如果不存在) ---
+if not os.path.exists(IMAGE_DIR):
+    os.makedirs(IMAGE_DIR)
+if not os.path.exists(REPORTS_DIR):
+    os.makedirs(REPORTS_DIR)
 
+# --- 检查项目文件 ---
+if not os.path.exists(PROJECT_FILE):
+    print(f"项目文件不存在：{PROJECT_FILE}")
+    exit() # 如果文件不存在，则退出脚本
+else:
+    print(f"项目文件存在：{PROJECT_FILE}")
+
+print(f"指定的设计名称：{DESIGN_NAME}")
+
+# --- 初始化 AEDT ---
 desk = Desktop(version=AEDT_VERSION, non_graphical=False)
-app  = desk.load_project(PROJECT_FILE, design_name=DESIGN_NAME)
+app = desk.load_project(PROJECT_FILE, design_name=DESIGN_NAME)
 
-# 1) 开域（如果工程已有人为的 air region，可仅调用 create_open_region）
-#    若你明确知道已有 Region，可注释掉 create_air_region 这行
-try:
-    app.modeler.create_air_region(x_pos="10mm", y_pos="10mm", z_pos="10mm")
-except Exception:
-    # Region 已存在会抛信息，不致命；忽略
-    pass
-
-app.create_open_region(frequency=F0, boundary="Radiation")   # 或 boundary="PML"
-# 文档：Hfss.create_open_region(frequency, boundary, ...)
-# https://aedt.docs.pyansys.com/.../Hfss.create_open_region.html
-
-# 2) 平面波激励：正入射（phi=0deg, theta=0deg），垂直极化
-#    正确用法：vector_format + propagation_vector
-app.plane_wave(
-    vector_format="Spherical",
-    polarization="Vertical",  # 或 "Horizontal"；也可给自定义极化向量
-    propagation_vector=[["0deg","0deg",1], ["0deg","0deg",1]],
-    origin=["0mm","0mm","0mm"]
-)
-# 文档签名与参数说明见：
-# https://aedt.docs.pyansys.com/.../Hfss.plane_wave.html
-
-# 3) Setup + 离散扫频（保存场数据，否则无端口问题会报错）
+# --- 创建仿真设置 ---
 setup = app.create_setup("Setup_24G")
-setup.props["Frequency"] = F0
+setup.props["Frequency"] = "24GHz"
 setup.props["MaximumPasses"] = 10
 setup.props["DeltaS"] = 0.01
 setup.props["MinimumConvergedPasses"] = 2
 
+# --- 创建扫频设置 ---
 app.create_linear_count_sweep(
     setup=setup.name,
     units="GHz",
-    start_frequency=float(FMIN.replace("GHz","")),
-    stop_frequency=float(FMAX.replace("GHz","")),
-    num_of_freq_points=NPTS,
-    sweep_type="Discrete",     # 关键：无端口用 Discrete / Fast
-    name="Sweep_22_26G",
-    save_fields=True,          # 关键：至少保存一次场
-    save_rad_fields=True       # 可选：仅保存辐射场，便于做远场
+    start_frequency=22.0,
+    stop_frequency=26.0,
+    num_of_freq_points=51,
+    sweep_type="Discrete",
+    name="Sweep_22_26G_fast",
+    save_fields=True,
+    save_rad_fields=True
 )
-# 文档：Hfss.create_linear_count_sweep(..., save_fields, save_rad_fields, sweep_type)
-# https://aedt.docs.pyansys.com/.../Hfss.create_linear_count_sweep.html
 
-# （可选）4) 插入远场采样球（用于辐射/散射方向图/RCS）
-#    例如：phi: 0→360° step 5°, theta: 0→180° step 5°
-app.insert_infinite_sphere(definition="Theta-Phi", x_start="0deg", x_stop="180deg", x_step="5deg",
-                            y_start="0deg", y_stop="360deg", y_step="5deg")
-# 文档：insert_infinite_sphere
-# https://aedt.docs.pyansys.com/.../Hfss.insert_infinite_sphere.html
+# --- 插入远场采样球 ---
+# 注意：如果项目中已存在 "Infinite Sphere 1"，此步会跳过或报错，具体取决于PyAEDT版本行为
+# 最好在运行前确保项目中没有同名设置
+if "Infinite Sphere 1" not in app.modeler.get_boundaries_name():
+    app.insert_infinite_sphere(
+        name="Infinite Sphere 1",
+        definition="Theta-Phi",
+        x_start="0deg", x_stop="180deg", x_step="5deg",
+        y_start="0deg", y_stop="360deg", y_step="5deg"
+    )
 
+# --- 保存项目并开始分析 ---
 app.save_project()
-app.analyze(setup=setup.name)   # 正确参数名是 setup
-# 文档：Hfss.analyze(...)
-# https://aedt.docs.pyansys.com/version/stable/API/_autosummary/ansys.aedt.core.hfss.Hfss.analyze.html
+print("开始分析，请稍候...")
+app.analyze(setup=setup.name)
+print("分析完成。")
 
-print("✅ 求解完成；请在 GUI 里用 Far Fields / Radiation Pattern 查看散射或回波方向图。")
+# --- 后处理：创建、导出远场辐射图 ---
+post_processor = app.post
+plot_name = "FarFieldPattern_3D"  # 定义图表名称
 
-# desk.release_desktop()
+# 1. 在 AEDT 中创建远场辐射图 (3D Polar Plot)
+print(f"正在创建报告: {plot_name}")
+post_processor.create_report(
+    plot_name,
+    report_type="3D Polar Plot",
+    display_type="Far Fields",
+    far_field_setup="Infinite Sphere 1",
+    primary_sweep_variable="Theta",
+    secondary_sweep_variable="Phi",
+    quantity="GainTotal", # 你可以根据需要改为 rETotal, RealizedGainTotal 等
+    solution=setup.name + " : " + "Sweep_22_26G_fast"
+)
+
+# 2. 将创建的报告导出为 JPG 图像
+image_path = os.path.join(IMAGE_DIR, f"{plot_name}.jpg")
+print(f"正在导出图像到: {image_path}")
+post_processor.export_report_to_jpg(IMAGE_DIR, plot_name)
+# 注意: export_report_to_jpg 会自动在指定目录生成名为 "plot_name.jpg" 的文件
+
+# --- 生成 PDF 仿真报告 ---
+print("正在生成 PDF 报告...")
+report = AnsysReport()
+report.aedt_version = AEDT_VERSION
+report.template_name = "AnsysTemplate"
+report.project_name = os.path.basename(PROJECT_FILE)
+report.design_name = DESIGN_NAME
+report.create()
+
+# 添加章节和图表
+report.add_chapter("Far Field Analysis")
+report.add_sub_chapter("Radiation Pattern")
+if os.path.exists(image_path):
+    report.add_image(image_path, width=400, caption="Far Field Radiation Pattern (GainTotal)")
+else:
+    print(f"警告: 未找到图像文件 {image_path}，无法添加到PDF。")
+report.add_toc()
+
+# 3. 保存 PDF 报告 (修正后的调用方式)
+pdf_filename = "FarFieldReport.pdf"
+report.save_pdf(output_dir=REPORTS_DIR, output_file=pdf_filename)
+print(f"PDF 报告已保存到: {os.path.join(REPORTS_DIR, pdf_filename)}")
+
+# --- 导出图形数据为 CSV 格式 ---
+print(f"正在导出 {plot_name} 的数据为 CSV...")
+exported_file = post_processor.export_report_to_file(REPORTS_DIR, plot_name, ".csv")
+print(f"图形数据已导出到: {exported_file}")
+
+# --- 释放 AEDT ---
+desk.release_desktop()
+print("脚本执行完毕。")
+
